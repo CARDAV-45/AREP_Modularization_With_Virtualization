@@ -25,9 +25,15 @@ public class HttpWebServer {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0);
             server.createContext("/", new MainHandler(registry));
-            server.setExecutor(Executors.newSingleThreadExecutor());
+            server.setExecutor(Executors.newFixedThreadPool(10));
             server.start();
             System.out.println("Server running on http://0.0.0.0:" + port);
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                System.out.println("Shutting down server...");
+                server.stop(5);
+                System.out.println("Server stopped.");
+            }));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to start HTTP server", e);
         }

@@ -4,10 +4,51 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Micro Web Server</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    h1 { border-bottom: 2px solid #333; padding-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th { background: #333; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #ddd; }
+    a { color: #0066cc; text-decoration: none; font-family: monospace; }
+    a:hover { text-decoration: underline; }
+    .badge { background: #28a745; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  </style>
 </head>
 <body>
-  <h1>Micro Web Server Running</h1>
-  <p>Dynamic endpoint: <a href="/greeting?name=David">/greeting?name=David</a></p>
-  <p>Static image endpoint: <a href="/pixel.png">/pixel.png</a></p>
+  <h1>Micro Web Server</h1>
+  <p>Available endpoints:</p>
+  <table>
+    <tr>
+      <th>Method</th>
+      <th>Route</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><span class="badge">GET</span></td>
+      <td><a href="/">/</a></td>
+      <td>Index page</td>
+    </tr>
+    <tr>
+      <td><span class="badge">GET</span></td>
+      <td><a href="/hello">/hello</a></td>
+      <td>Hello world</td>
+    </tr>
+    <tr>
+      <td><span class="badge">GET</span></td>
+      <td><a href="/pi">/pi</a></td>
+      <td>Returns the value of PI</td>
+    </tr>
+    <tr>
+      <td><span class="badge">GET</span></td>
+      <td><a href="/greeting?name=Carlos">/greeting?name=Carlos</a></td>
+      <td>Greeting with query param <code>name</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge">GET</span></td>
+      <td><a href="/pixel.png">/pixel.png</a></td>
+      <td>Static image</td>
+    </tr>
+  </table>
 </body>
 </html>

@@ -1,4 +1,4 @@
-# Servidor Web con Framework IoC basado en Reflexión
+# Servidor Web con Framework IoC basado en Reflexión con Docker
 
 - **Autor**: Carlos David Barrero Velasquez
 - **Universidad**: Escuela Colombiana de Ingeniería Julio Garavito
@@ -7,13 +7,13 @@
 
 ## Introducción
 
-Este laboratorio implementa un **servidor web tipo Apache** en Java puro, sin frameworks externos, que integra un sistema de **Inversión de Control (IoC)** mediante reflexión para construir aplicaciones web a partir de POJOs anotados. El servidor soporta contenido estático (HTML, PNG) y endpoints dinámicos configurados mediante anotaciones personalizadas.
+Este laboratorio implementa un **servidor web tipo Apache** en Java puro, sin frameworks externos, que integra un sistema de **Inversión de Control (IoC)** mediante reflexión para construir aplicaciones web a partir de POJOs anotados. El servidor soporta contenido estático (HTML, PNG) y endpoints dinámicos configurados mediante anotaciones personalizadas. Se añade soporte de **concurrencia**, **apagado elegante** y **despliegue con Docker en AWS EC2**.
 
 **Contenido principal**:
-- **Servidor HTTP Nativo**: Implementación con `HttpServer` de Java, atendiendo múltiples solicitudes no concurrentes
+- **Servidor HTTP Nativo**: Implementación con `HttpServer` de Java con pool de hilos para concurrencia
 - **Framework IoC con Reflexión**: Carga automática de componentes mediante escaneo de classpath y anotaciones
 - **Anotaciones Personalizadas**: `@RestController`, `@GetMapping`, `@RequestParam` para definir servicios REST
-- **Despliegue en AWS EC2**: Configuración de instancia, security groups y ejecución en producción
+- **Contenerización con Docker**: Imagen publicada en Docker Hub y desplegada en AWS EC2
 
 ---
 
@@ -27,7 +27,7 @@ web/
 │   │   ├── java/com/eci/arep/web/
 │   │   │   ├── WebApplication.java          # Bootstrap del framework
 │   │   │   ├── ControllerRegistry.java      # Registro y escaneo de controladores
-│   │   │   ├── HttpWebServer.java           # Servidor HTTP
+│   │   │   ├── HttpWebServer.java           # Servidor HTTP concurrente
 │   │   │   ├── RouteHandler.java            # Invocador de métodos por reflexión
 │   │   │   ├── Request.java                 # Parseador de query params
 │   │   │   ├── GetMapping.java              # Anotación para endpoints GET
@@ -36,106 +36,208 @@ web/
 │   │   │   └── HelloController.java         # Controlador de ejemplo
 │   │   └── resources/
 │   │       └── static/
-│   │           ├── index.html               # Página principal
+│   │           ├── index.html               # Página principal con índice de endpoints
 │   │           └── pixel.png                # Imagen de prueba
 │   └── test/
 │       └── java/com/eci/arep/web/
 │           └── WebApplicationTests.java     # Pruebas unitarias
+├── Dockerfile                                # Imagen Docker del servidor
 ├── pom.xml                                   # Configuración Maven
-├── README.md                                 # Este archivo
-└── Capturas/                                 # Evidencias de despliegue AWS
-    ├── LanzarInstancia.png
-    ├── SecurityGroup.png
-    ├── ConexionSsh.png
-    ├── EjecucionEc2.png
-    └── [endpoints...]
+└── README.md                                 # Este archivo
 ```
 
 ---
 
-## Cómo Ejecutar
+## Cómo Ejecutar Localmente
 
 ### Requisitos:
 - Java 17+
 - Maven 3.9+
 
-### Cómo lo corrí en mi máquina (Windows)
+### Compilar y correr:
 
-Compilé el proyecto:
 ```bash
-.\mvnw.cmd clean package
+mvn package
+java -cp "target/classes;target/dependency/*" com.eci.arep.web.WebApplication
 ```
 
-Ejecuté el servidor con escaneo automático:
-```bash
-java -cp target/classes com.eci.arep.web.WebApplication
+### Endpoints disponibles:
+
 ```
-
-```bash
-java -cp target/classes com.eci.arep.web.WebApplication com.eci.arep.web.HelloController
-```
-
-### En Linux/Mac:
-
-```bash
-# Compilar
-mvn clean package
-
-# Ejecutar con escaneo automático
-java -cp target/classes com.eci.arep.web.WebApplication
-```
-
-### Probar Endpoints:
-
-```bash
 http://localhost:35000/
-http://localhost:35000/greeting?name=David
-http://localhost:35000/pi
 http://localhost:35000/hello
+http://localhost:35000/pi
+http://localhost:35000/greeting?name=Carlos
 http://localhost:35000/pixel.png
 ```
 
 ---
 
-## Arquitectura del Framework IoC
+## Despliegue con Docker
 
-### Componentes Principales
+### 1. Compilar el proyecto
 
-**1. Sistema de Anotaciones**  
-Define el contrato para marcar componentes y endpoints mediante `@RestController`, `@GetMapping` y `@RequestParam`.
+```bash
+mvn package
+```
 
-**2. ControllerRegistry**  
-Escanea el classpath buscando clases anotadas con `@RestController` y registra métodos `@GetMapping`.
+### 2. Construir la imagen Docker
 
-**3. RouteHandler**  
-Invoca métodos mediante reflexión, resolviendo parámetros `@RequestParam` desde el query string.
+```bash
+docker build --tag dockersparkprimer .
+```
 
-**4. HttpWebServer**  
-Servidor HTTP que escucha en todas las interfaces (0.0.0.0) y enruta solicitudes a controladores registrados.
+<p align="center">
+  <img src="Capturas/Build.png" alt="Docker build">
+</p>
 
-### Flujo de Ejecución
+### 3. Correr el contenedor
+
+```bash
+docker run -d -p 8080:35000 dockersparkprimer
+```
+
+El servidor queda disponible en `http://localhost:8080`. El puerto `35000` interno del contenedor se mapea al `8080` del host.
+
+<p align="center">
+  <img src="Capturas/Imagen.png" alt="Docker image">
+</p>
+
+<p align="center">
+  <img src="Capturas/Contenedor.png" alt="Docker container running">
+</p>
+
+---
+
+## Publicación en Docker Hub
+
+### 1. Etiquetar y subir la imagen
+
+```bash
+docker tag dockersparkprimer cardav45/arep3tarea
+docker login
+docker push cardav45/arep3tarea
+```
+
+<p align="center">
+  <img src="Capturas/DockerHub1.png" alt="Docker Hub repositorio">
+</p>
+
+<p align="center">
+  <img src="Capturas/DockerHub2.png" alt="Docker Hub imagen publicada">
+</p>
+
+La imagen queda disponible públicamente en: `docker.io/cardav45/arep3tarea`
+
+### 2. Correrla desde cualquier máquina
+
+```bash
+docker pull cardav45/arep3tarea
+docker run -d -p 8080:35000 cardav45/arep3tarea
+```
+
+---
+
+## Despliegue en AWS EC2
+
+### 1. Lanzar instancia EC2
+
+Se crea una instancia EC2 con Amazon Linux 2023.
+
+<p align="center">
+  <img src="Capturas/Instancia.png" alt="Instancia EC2 corriendo">
+</p>
+
+### 2. Instalar Docker en la instancia
+
+```bash
+sudo yum update -y
+sudo yum install docker -y
+sudo service docker start
+sudo usermod -a -G docker ec2-user
+```
+
+<p align="center">
+  <img src="Capturas/HabilitarDocker.png" alt="Instalar y habilitar Docker en EC2">
+</p>
+
+Cerrar sesión y volver a ingresar por SSH para que los cambios de grupo apliquen.
+
+### 3. Conectarse por SSH
+
+```bash
+ssh -i "AppServer4Key.pem" ec2-user@ec2-100-53-0-35.compute-1.amazonaws.com
+```
+
+<p align="center">
+  <img src="Capturas/ConexionSsh.png" alt="Conexión SSH">
+</p>
+
+### 4. Ejecutar la imagen desde Docker Hub
+
+```bash
+docker run -d --name arepweb -p 42000:35000 cardav45/arep3tarea
+```
+
+Para detener el contenedor:
+
+```bash
+docker stop arepweb
+```
+
+<p align="center">
+  <img src="Capturas/DockerStop.png" alt="Docker stop contenedor">
+</p>
+
+### 5. Configurar Security Group (Inbound Rules)
+
+Agregar una regla de entrada en la consola de AWS:
 
 ```
-1. Inicio de aplicación
-   └─> WebApplication.main()
+Type:     Custom TCP
+Port:     42000
+Source:   0.0.0.0/0
+```
 
-2. Bootstrap del framework
-   ├─> Parseo de argumentos (--port, clases explícitas)
-   └─> ControllerRegistry.scanPackage("com.eci.arep")
+<p align="center">
+  <img src="Capturas/SecurityG.png" alt="Security Group puerto 42000">
+</p>
 
-3. Escaneo de componentes
-   ├─> Buscar clases con @RestController
-   ├─> Instanciar controladores
-   └─> Registrar métodos @GetMapping en mapa de rutas
+### 6. Verificar acceso público
 
-4. Inicio del servidor HTTP
-   └─> HttpWebServer.start() en puerto 35000
+```
+http://ec2-100-53-0-35.compute-1.amazonaws.com:42000/
+http://ec2-100-53-0-35.compute-1.amazonaws.com:42000/hello
+http://ec2-100-53-0-35.compute-1.amazonaws.com:42000/pi
+http://ec2-100-53-0-35.compute-1.amazonaws.com:42000/greeting?name=Carlos
+```
 
-5. Atención de solicitudes
-   ├─> GET /greeting?name=David
-   ├─> RouteHandler encuentra método anotado
-   ├─> Resuelve @RequestParam("name")
-   └─> Invoca método por reflexión → "Hola David"
+<p align="center">
+  <img src="Capturas/Evidencia.png" alt="Servidor corriendo en EC2">
+</p>
+
+---
+
+## Mejoras al Framework
+
+### Concurrencia
+
+Por defecto `HttpServer` usa un solo hilo. Se reemplazó por un pool fijo de 10 hilos, permitiendo que el servidor atienda varias peticiones al mismo tiempo sin que una bloquee a las demás:
+
+```java
+server.setExecutor(Executors.newFixedThreadPool(10));
+```
+
+### Apagado controlado
+
+Cuando el proceso recibe una señal de terminación (`Ctrl+C` o `docker stop`), un shutdown hook intercepta la señal y le da hasta 5 segundos al servidor para terminar las conexiones que tenga activas antes de cerrarse:
+
+```java
+Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    System.out.println("Shutting down server...");
+    server.stop(5);
+    System.out.println("Server stopped.");
+}));
 ```
 
 ---
@@ -147,178 +249,54 @@ Se implementaron pruebas unitarias que validan:
 - Resolución de `@RequestParam` con valor por defecto
 - Resolución de `@RequestParam` desde query string
 
-Ejecutar pruebas:
 ```bash
 mvn test
 ```
 
 Resultado:
 ```
-[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
-[INFO] BUILD SUCCESS
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
 ```
 
 ---
 
-## Despliegue en AWS EC2
+## Arquitectura del Framework IoC
 
-### 1. Creación de Instancia EC2
+### Flujo de Ejecución
 
-Se configuró una instancia Amazon Linux 2023 con Java 17 preinstalado:
-
-<p align="center">
-  <img src="Capturas/LanzarInstancia.png" alt="Configuración de Instancia EC2">
-</p>
-*Figura 1: Configuración inicial de instancia EC2 - Amazon Linux 2023, t2.micro*
-
-<p align="center">
-  <img src="Capturas/LanzarInstancia2.png" alt="Creación de Par de Claves">
-</p>
-*Figura 2: Generación de par de claves SSH para acceso seguro*
-
-<p align="center">
-  <img src="Capturas/LanzarInstancia3.png" alt="Correcta creación">
-</p>
-*Figura 3: Correcta creación*
-
-<p align="center">
-  <img src="Capturas/LanzarInstancia4.png" alt="Resumen de Configuración">
-</p>
-*Figura 4: Resumen final antes de lanzar la instancia*
-
-### 2. Configuración de Security Group
-
-Puerto 35000 abierto para acceso HTTP desde cualquier origen:
-
-<p align="center">
-  <img src="Capturas/SecurityGroup.png" alt="Reglas de Security Group">
-</p>
-*Figura 5: Reglas de entrada del Security Group - Puerto 35000 TCP habilitado*
-
-**Reglas configuradas**:
 ```
-Type: Custom TCP
-Protocol: TCP
-Port Range: 35000
-Source: 0.0.0.0/0
+1. WebApplication.main()
+   └─> ControllerRegistry.scanPackage("com.eci.arep")
+
+2. Escaneo de componentes
+   ├─> Buscar clases con @RestController
+   ├─> Instanciar controladores
+   └─> Registrar métodos @GetMapping en mapa de rutas
+
+3. HttpWebServer.start() en puerto 35000
+   └─> Pool de 10 hilos para concurrencia
+
+4. Atención de solicitudes
+   ├─> GET /greeting?name=Carlos
+   ├─> RouteHandler encuentra método anotado
+   ├─> Resuelve @RequestParam("name")
+   └─> Invoca método por reflexión → "Hola Carlos"
 ```
-
-### 3. Conexión y Transferencia de Archivos
-
-Conexión SSH y transferencia del zip compilado:
-<p align="center">
-  <img src="Capturas/Sftp.png" alt="Transferencia de Archivos">
-</p>
-*Figura 6: Transferencia de archivos compilados via SFTP*
-
-<p align="center">
-  <img src="Capturas/ConexionSsh.png" alt="Conexión SSH a EC2">
-</p>
-*Figura 7 : Conexión exitosa via SSH a la instancia EC2*
-
-
-**Comandos utilizados**:
-```bash
-# Conexión SSH
-ssh -i "AppServer4Key.pem" ec2-user@ec2-3-235-172-220.compute-1.amazonaws.com
-# Subida del artefacto por SFTP
-sftp -i "AppServer4Key.pem" ec2-user@ec2-3-235-172-220.compute-1.amazonaws.com
-
-# Ejecutar servidor
-java -cp classes com.eci.arep.web.WebApplication
-```
-
-### 4. Servidor en Ejecución
-
-Servidor corriendo exitosamente en EC2:
-
-<p align="center">
-  <img src="Capturas/EjecucionEc2.png" alt="Servidor Corriendo">
-</p>
-*Figura 8: Servidor iniciado y escuchando en puerto 35000*
-
-**Output del servidor**:
-```
-Loaded routes: [/, /pi, /hello, /greeting]
-Server running on http://0.0.0.0:35000
-```
-
-### 5. Validación de Endpoints
-
-Se validaron todos los endpoints definidos en el controlador:
-
-<p align="center">
-  <img src="Capturas/Raiz.png" alt="Endpoint Raíz">
-</p>
-*Figura 9: Endpoint raíz (/) retornando mensaje de bienvenida*
-
-<p align="center">
-  <img src="Capturas/Hello.png" alt="Endpoint Hello">
-</p>
-*Figura 10: Endpoint /hello retornando "hello world"*
-
-<p align="center">
-  <img src="Capturas/Pi.png" alt="Endpoint PI">
-</p>
-*Figura 11: Endpoint /pi calculando y retornando valor de PI*
-
-<p align="center">
-  <img src="Capturas/Name.png" alt="Endpoint con Parámetro">
-</p>
-*Figura 12: Endpoint /greeting con parámetro name funcionando correctamente*
-
-<p align="center">
-  <img src="Capturas/Png.png" alt="Servicio de Imagen PNG">
-</p>
-*Figura 13: Servidor sirviendo correctamente imagen estática pixel.png*
-
-### 6. URL Pública de Despliegue
-
-**URL de producción**:
-```
-http://ec2-3-235-172-220.compute-1.amazonaws.com:35000/
-```
-
-**Endpoints disponibles**:
-- `/` - Mensaje de bienvenida
-- `/hello` - Hello world
-- `/pi` - Cálculo de PI
-- `/greeting?name=AWS` - Saludo personalizado
-- `/pixel.png` - Imagen estática
 
 ---
 
-## Resultados Clave
+## Demo en Video
 
-### Funcionalidades Implementadas
+> **Nota:** El video requiere cuenta institucional de la Escuela Colombiana de Ingeniería Julio Garavito para ser visualizado.
 
-- Servidor HTTP nativo con soporte GET
-- Framework IoC con reflexión y escaneo de classpath
-- Anotaciones personalizadas (@RestController, @GetMapping, @RequestParam)
-- Inyección de parámetros con valores por defecto
-- Servicio de estáticos (HTML, PNG)
-- Despliegue en AWS EC2 con acceso público
-- Pruebas unitarias con cobertura del core del framework  
-
-## Conclusiones
-
-1. **La reflexión de Java** permite construir frameworks IoC completos sin dependencias externas, proporcionando control total sobre la carga de componentes y resolución de dependencias.
-
-2. **El patrón de anotaciones** simplifica la declaración de endpoints y parámetros, haciendo el código más declarativo y mantenible.
-
-3. **HttpServer nativo de Java** es suficiente para aplicaciones web simples, aunque frameworks como Netty ofrecen mejor rendimiento para alta concurrencia.
-
-4. **El escaneo de classpath** mediante reflexión tiene un costo de arranque pero permite descubrimiento automático de componentes sin configuración explícita.
-
-5. **El despliegue en EC2** requiere configuración correcta de Security Groups y binding del servidor a `0.0.0.0` para permitir acceso externo.
+[Ver demo del funcionamiento](https://pruebacorreoescuelaingeduco-my.sharepoint.com/:v:/g/personal/carlos_barrero-v_mail_escuelaing_edu_co/IQD_RU1lDeeoRZIxUoeb6fAJAVrtj-0bkbDLdpTgk0pTgDU?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=FwEUQP)
 
 ---
 
 ## Referencias
 
-- Presentación del profesor: [Meta-Reflection-Annotations](https://campusvirtual.escuelaing.edu.co/moodle/pluginfile.php/132081/mod_resource/content/0/03Meta-Reflection-Annotations.pdf)
 - Oracle Java Documentation: [Reflection API](https://docs.oracle.com/javase/tutorial/reflect/index.html)
-- Oracle Java Documentation: [Annotations](https://docs.oracle.com/javase/tutorial/java/annotations/)
 - Oracle Java Documentation: [HTTP Server](https://docs.oracle.com/en/java/javase/17/docs/api/jdk.httpserver/com/sun/net/httpserver/HttpServer.html)
 - AWS Documentation: [Amazon EC2 User Guide](https://docs.aws.amazon.com/ec2/)
-- Baeldung: [A Guide to Java Reflection](https://www.baeldung.com/java-reflection)
+- Docker Documentation: [Docker Hub](https://hub.docker.com/)

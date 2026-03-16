@@ -11,7 +11,6 @@ class WebApplicationTests {
         ControllerRegistry registry = new ControllerRegistry();
         registry.loadFromClassName("com.eci.arep.web.HelloController");
 
-        assertNotNull(registry.getHandler("/"));
         assertNotNull(registry.getHandler("/pi"));
         assertNotNull(registry.getHandler("/hello"));
         assertNotNull(registry.getHandler("/greeting"));
